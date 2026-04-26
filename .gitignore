@@ -1,1 +1,25 @@
-.gemini
+# Go
+backend/*.exe
+backend/*.test
+backend/vendor/
+backend/*.out
+backend/.env
+
+# Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/*.log
+frontend/.env*
+frontend/.next/
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.gemini/
+
+# Misc
+*.tmp
+*.swp
