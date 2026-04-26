@@ -1,0 +1,7 @@
+{
+  "integration": "gemini",
+  "version": "0.4.5",
+  "scripts": {
+    "update-context": ".specify/integrations/gemini/scripts/update-context.sh"
+  }
+}
