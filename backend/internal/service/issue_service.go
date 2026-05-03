@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/angith/issueboard/internal/github"
 	"github.com/angith/issueboard/internal/repository"
@@ -12,10 +13,10 @@ import (
 type IssueService struct {
 	issueRepo     *repository.IssueRepository
 	repoRepo      *repository.RepoRepository
-	githubService *github.RepoService
+	githubService *github.IssueService
 }
 
-func NewIssueService(issueRepo *repository.IssueRepository, repoRepo *repository.RepoRepository, githubService *github.RepoService) *IssueService {
+func NewIssueService(issueRepo *repository.IssueRepository, repoRepo *repository.RepoRepository, githubService *github.IssueService) *IssueService {
 	return &IssueService{
 		issueRepo:     issueRepo,
 		repoRepo:      repoRepo,
@@ -33,7 +34,13 @@ type IssueBoard struct {
 	Categories []*IssueCategory `json:"categories"`
 }
 
-func (s *IssueService) GetCategorizedIssues(ctx context.Context, repoID uuid.UUID) (*IssueBoard, error) {
+func (s *IssueService) GetCategorizedIssues(ctx context.Context, userID uuid.UUID, repoID uuid.UUID) (*IssueBoard, error) {
+	// Verify user has access to this repo
+	repo, err := s.repoRepo.GetByID(ctx, userID, repoID)
+	if err != nil {
+		return nil, fmt.Errorf("repository not found or access denied")
+	}
+
 	issues, err := s.issueRepo.ListByRepoID(ctx, repoID)
 	if err != nil {
 		return nil, err
@@ -41,7 +48,7 @@ func (s *IssueService) GetCategorizedIssues(ctx context.Context, repoID uuid.UUI
 
 	// If no issues cached, trigger a refresh
 	if len(issues) == 0 {
-		if err := s.RefreshIssues(ctx, repoID); err != nil {
+		if err := s.RefreshIssues(ctx, userID, repoID); err != nil {
 			return nil, err
 		}
 		// Fetch again after refresh
@@ -51,21 +58,20 @@ func (s *IssueService) GetCategorizedIssues(ctx context.Context, repoID uuid.UUI
 		}
 	}
 
-	return s.groupIssues(issues), nil
+	board := s.groupIssues(issues)
+	board.Repository = repo.FullName
+	return board, nil
 }
 
-func (s *IssueService) RefreshIssues(ctx context.Context, repoID uuid.UUID) error {
-	// 1. Get repository info from DB
-	// (Needs GetByID in repoRepo - adding it here for the sake of completeness in logic)
-	// For now, I'll assume we have the repo info or we just use a placeholder
-	// In a real app, I'd have a method to get repo details by ID
-
-	// Mocking owner/repo for now or assuming we fetch it
-	owner := "mock"
-	repoName := "mock"
+func (s *IssueService) RefreshIssues(ctx context.Context, userID uuid.UUID, repoID uuid.UUID) error {
+	// 1. Get repository info from DB and verify access
+	repo, err := s.repoRepo.GetByID(ctx, userID, repoID)
+	if err != nil {
+		return fmt.Errorf("repository not found or access denied")
+	}
 
 	// 2. Fetch from GitHub
-	gIssues, err := s.githubService.GetIssues(ctx, owner, repoName)
+	gIssues, err := s.githubService.GetIssues(ctx, repo.Owner, repo.Name)
 	if err != nil {
 		return err
 	}

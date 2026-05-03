@@ -28,7 +28,6 @@ func (s *RepoService) AddRepository(ctx context.Context, userID uuid.UUID, url s
 	}
 
 	repo := &models.Repository{
-		UserID:       userID,
 		GitHubRepoID: gRepo.GetID(),
 		FullName:     gRepo.GetFullName(),
 		Owner:        gRepo.GetOwner().GetLogin(),
@@ -36,7 +35,7 @@ func (s *RepoService) AddRepository(ctx context.Context, userID uuid.UUID, url s
 		URL:          gRepo.GetHTMLURL(),
 	}
 
-	if err := s.repoRepo.Create(ctx, repo); err != nil {
+	if err := s.repoRepo.AddToUser(ctx, userID, repo); err != nil {
 		return nil, err
 	}
 

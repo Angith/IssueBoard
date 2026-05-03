@@ -1,107 +1,69 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useRouter, useParams } from 'next/navigation';
+import { useEffect, useState, use } from 'react';
+import { useAuth } from '@/components/AuthProvider';
+import { issueService } from '@/services/api';
 import IssueBoard from '@/components/IssueBoard';
 
-interface Label {
-  name: string;
-  color: string;
-}
-
-interface Issue {
-  id: string;
-  number: number;
-  title: string;
-  url: string;
-  state: string;
-}
-
-interface IssueCategory {
-  label: Label;
-  issues: Issue[];
-}
-
-interface Board {
-  repository: string;
-  categories: IssueCategory[];
-}
-
-export default function RepoBoardPage() {
-  const { id } = useParams();
-  const [board, setBoard] = useState<Board | null>(null);
+export default function RepoDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { session, loading: authLoading } = useAuth();
+  const [board, setBoard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
 
-  const fetchBoard = useCallback(async (token: string) => {
+  const fetchBoard = async () => {
+    if (!session?.access_token) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/repos/${id}/issues`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setBoard(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch board', err);
+      const data = await issueService.getBoard(id, session.access_token);
+      setBoard(data);
+      setError('');
+    } catch (err: any) {
+      setError(err.message);
     } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-      fetchBoard(session.access_token);
-    };
-
-    checkUser();
-  }, [id, router, fetchBoard]);
-
-  const handleRefresh = async () => {
-    setLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/repos/${id}/refresh`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      if (res.ok) {
-        fetchBoard(session.access_token);
-      }
-    } catch (err) {
-      console.error('Failed to refresh board', err);
       setLoading(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Loading Board...</div>;
-  if (!board) return <div className="p-8 text-center">Board not found.</div>;
+  const handleRefresh = async () => {
+    if (!session?.access_token) return;
+    setRefreshing(true);
+    try {
+      await issueService.refresh(id, session.access_token);
+      await fetchBoard();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!authLoading && session) {
+      fetchBoard();
+    }
+  }, [session, authLoading, id]);
+
+  if (authLoading || (loading && !board)) return <div className="p-8">Loading board...</div>;
 
   return (
     <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Issue Board</h1>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">{board?.repository || 'Repository'}</h1>
+          <p className="text-gray-600">Issues categorized by labels</p>
+        </div>
         <button
           onClick={handleRefresh}
-          className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          disabled={refreshing}
+          className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800 disabled:opacity-50"
         >
-          Refresh from GitHub
+          {refreshing ? 'Refreshing...' : 'Refresh from GitHub'}
         </button>
       </div>
-      
-      <IssueBoard categories={board.categories} />
+
+      <IssueBoard categories={board?.categories || []} error={error} />
     </div>
   );
 }

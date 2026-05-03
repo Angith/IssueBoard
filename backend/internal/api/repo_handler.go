@@ -7,7 +7,6 @@ import (
 	"github.com/angith/issueboard/internal/api/middleware"
 	"github.com/angith/issueboard/internal/service"
 	"github.com/google/uuid"
-	"github.com/supabase-community/gotrue-go/types"
 )
 
 type RepoHandler struct {
@@ -19,8 +18,12 @@ func NewRepoHandler(repoService *service.RepoService) *RepoHandler {
 }
 
 func (h *RepoHandler) AddRepository(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value(middleware.UserKey).(*types.User)
-	userID, _ := uuid.Parse(user.ID.String())
+	userIDStr := middleware.GetUserID(r.Context())
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusUnauthorized)
+		return
+	}
 
 	var body struct {
 		URL string `json:"url"`
@@ -42,8 +45,12 @@ func (h *RepoHandler) AddRepository(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RepoHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value(middleware.UserKey).(*types.User)
-	userID, _ := uuid.Parse(user.ID.String())
+	userIDStr := middleware.GetUserID(r.Context())
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusUnauthorized)
+		return
+	}
 
 	repos, err := h.repoService.ListRepositories(r.Context(), userID)
 	if err != nil {

@@ -11,7 +11,6 @@ import (
 	"github.com/angith/issueboard/internal/github"
 	"github.com/angith/issueboard/internal/repository"
 	"github.com/angith/issueboard/internal/service"
-	"github.com/supabase-community/gotrue-go"
 )
 
 func main() {
@@ -26,25 +25,20 @@ func main() {
 	// Initialize repositories
 	repoRepo := repository.NewRepoRepository(dbPool)
 	issueRepo := repository.NewIssueRepository(dbPool)
+	userRepo := repository.NewUserRepository(dbPool)
 
-	// Initialize services
-	// We need a GitHub client with a token, usually passed in headers or fetched from DB
-	// For simplicity in main, we'll initialize the client per-request in the handlers
-	// or use a service that takes a client.
+	// Initialize GitHub services
+	ghClient := github.NewClient("")
+	ghRepoService := github.NewRepoService(ghClient)
+	ghIssueService := github.NewIssueService(ghClient)
 
-	// Mocking GitHub client init
-	ghClient := github.NewClient("fake-token")
-	ghService := github.NewRepoService(ghClient)
-
-	repoService := service.NewRepoService(repoRepo, ghService)
-	issueService := service.NewIssueService(issueRepo, repoRepo, ghService)
+	// Initialize business services
+	repoService := service.NewRepoService(repoRepo, ghRepoService)
+	issueService := service.NewIssueService(issueRepo, repoRepo, ghIssueService)
 
 	// Initialize handlers
 	repoHandler := api.NewRepoHandler(repoService)
 	issueHandler := api.NewIssueHandler(issueService)
-
-	// Initialize Supabase Auth client for middleware
-	authClient := gotrue.New(cfg.SupabaseURL, cfg.SupabaseAnonKey)
 
 	// Set up routes
 	mux := http.NewServeMux()
@@ -55,7 +49,7 @@ func main() {
 	})
 
 	// Protected routes
-	authMidd := middleware.AuthMiddleware(authClient)
+	authMidd := middleware.AuthMiddleware(cfg.SupabaseJWTSecret, userRepo)
 
 	mux.Handle("/api/repos", authMidd(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {

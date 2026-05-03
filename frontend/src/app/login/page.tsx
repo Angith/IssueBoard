@@ -1,39 +1,54 @@
 'use client';
 
-import { Auth } from '@supabase/auth-ui-react';
-import { ThemeSupa } from '@supabase/auth-ui-shared';
+import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        router.push('/inventory');
-      }
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/inventory`,
+      },
     });
 
-    return () => subscription.unsubscribe();
-  }, [router]);
+    if (error) {
+      setMessage(`Error: ${error.message}`);
+    } else {
+      setMessage('Check your email for the magic link!');
+    }
+    setLoading(false);
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-            Sign in to IssueBoard
-          </h2>
-        </div>
-        <Auth
-          supabaseClient={supabase}
-          providers={['github']}
-          appearance={{ theme: ThemeSupa }}
-          onlyThirdPartyProviders
+    <div className="flex flex-col items-center justify-center min-h-screen py-2">
+      <h1 className="text-4xl font-bold mb-8">Login to IssueBoard</h1>
+      <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full max-w-md">
+        <input
+          type="email"
+          placeholder="Your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="p-2 border rounded"
+          required
         />
-      </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? 'Sending...' : 'Send Magic Link'}
+        </button>
+      </form>
+      {message && <p className="mt-4 text-center">{message}</p>}
     </div>
   );
 }

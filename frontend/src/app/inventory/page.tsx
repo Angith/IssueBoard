@@ -1,79 +1,63 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
-import AddRepoForm from '@/components/AddRepoForm';
+import { useEffect, useState } from 'react';
+import { useAuth } from '@/components/AuthProvider';
+import { repositoryService } from '@/services/api';
 import Link from 'next/link';
-
-interface Repository {
-  id: string;
-  full_name: string;
-  owner: string;
-  name: string;
-  url: string;
-}
+import AddRepoForm from '@/components/AddRepoForm';
 
 export default function InventoryPage() {
-  const [repos, setRepos] = useState<Repository[]>([]);
+  const { session, loading: authLoading } = useAuth();
+  const [repos, setRepos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [error, setError] = useState('');
 
-  const fetchRepos = useCallback(async (token: string) => {
+  const fetchRepos = async () => {
+    if (!session?.access_token) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/repos`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRepos(data || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch repos', err);
+      const data = await repositoryService.list(session.access_token);
+      setRepos(data);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-      fetchRepos(session.access_token);
-    };
+    if (!authLoading && session) {
+      fetchRepos();
+    }
+  }, [session, authLoading]);
 
-    checkUser();
-  }, [router, fetchRepos]);
-
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (authLoading || loading) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="mx-auto max-w-4xl p-8">
-      <h1 className="mb-8 text-3xl font-bold">Your Repository Inventory</h1>
+    <div className="p-8 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-8">My Repositories</h1>
       
-      <AddRepoForm onRepoAdded={(newRepo: Repository) => setRepos([...repos, newRepo])} />
+      <div className="mb-8">
+        <AddRepoForm onRepoAdded={fetchRepos} />
+      </div>
 
-      <div className="mt-8 grid gap-4">
+      {error && <p className="text-red-600 mb-4">{error}</p>}
+
+      <div className="grid gap-4">
         {repos.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No repositories added yet.</p>
+          <p>No repositories tracked yet. Add one above!</p>
         ) : (
           repos.map((repo) => (
-            <div key={repo.id} className="rounded-lg border p-4 shadow-sm hover:shadow-md transition-shadow flex justify-between items-center">
+            <Link
+              key={repo.id}
+              href={`/repos/${repo.id}`}
+              className="p-4 border rounded hover:bg-gray-50 flex justify-between items-center"
+            >
               <div>
-                <h3 className="text-lg font-semibold">{repo.full_name}</h3>
-                <a href={repo.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-                  View on GitHub
-                </a>
+                <h2 className="text-xl font-semibold">{repo.full_name}</h2>
+                <p className="text-sm text-gray-600">{repo.url}</p>
               </div>
-              <Link href={`/repos/${repo.id}`} className="rounded bg-gray-100 px-4 py-2 text-sm font-medium hover:bg-gray-200">
-                View Board
-              </Link>
-            </div>
+              <span className="text-blue-600">View Board &rarr;</span>
+            </Link>
           ))
         )}
       </div>

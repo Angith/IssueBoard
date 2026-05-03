@@ -7,7 +7,15 @@ import (
 	"github.com/google/go-github/v60/github"
 )
 
-func (s *RepoService) GetIssues(ctx context.Context, owner, repo string) ([]*github.Issue, error) {
+type IssueService struct {
+	client *Client
+}
+
+func NewIssueService(client *Client) *IssueService {
+	return &IssueService{client: client}
+}
+
+func (s *IssueService) GetIssues(ctx context.Context, owner, repo string) ([]*github.Issue, error) {
 	opts := &github.IssueListByRepoOptions{
 		State: "open",
 		ListOptions: github.ListOptions{

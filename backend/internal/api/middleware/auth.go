@@ -2,17 +2,21 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/supabase-community/gotrue-go"
+	"github.com/angith/issueboard/internal/repository"
+	"github.com/angith/issueboard/internal/repository/models"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type contextKey string
 
-const UserKey contextKey = "user"
+const UserIDKey contextKey = "user_id"
 
-func AuthMiddleware(authClient gotrue.Client) func(http.Handler) http.Handler {
+func AuthMiddleware(jwtSecret string, userRepo *repository.UserRepository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -21,20 +25,62 @@ func AuthMiddleware(authClient gotrue.Client) func(http.Handler) http.Handler {
 				return
 			}
 
-			token := strings.TrimPrefix(authHeader, "Bearer ")
-			if token == authHeader {
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString == authHeader {
 				http.Error(w, "Invalid authorization header", http.StatusUnauthorized)
 				return
 			}
 
-			user, err := authClient.WithToken(token).GetUser()
-			if err != nil {
+			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+				}
+				return []byte(jwtSecret), nil
+			})
+
+			if err != nil || !token.Valid {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), UserKey, user)
+			claims, ok := token.Claims.(jwt.MapClaims)
+			if !ok {
+				http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+				return
+			}
+
+			userIDStr, ok := claims["sub"].(string)
+			if !ok {
+				http.Error(w, "Missing user_id in token", http.StatusUnauthorized)
+				return
+			}
+
+			userID, err := uuid.Parse(userIDStr)
+			if err != nil {
+				http.Error(w, "Invalid user_id format", http.StatusUnauthorized)
+				return
+			}
+
+			// Ensure user exists in our local DB for FK constraints
+			email, _ := claims["email"].(string)
+			user := &models.User{
+				ID:    userID,
+				Email: email,
+			}
+			if err := userRepo.CreateOrUpdate(r.Context(), user); err != nil {
+				// We don't necessarily want to fail here if it's just a sync issue, 
+				// but for this project we'll assume it's critical.
+				http.Error(w, "Failed to sync user", http.StatusInternalServerError)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), UserIDKey, userIDStr)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func GetUserID(ctx context.Context) string {
+	userID, _ := ctx.Value(UserIDKey).(string)
+	return userID
 }

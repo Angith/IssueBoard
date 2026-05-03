@@ -2,18 +2,17 @@ package config
 
 import (
 	"log"
-	"os"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	DatabaseURL        string
-	SupabaseURL        string
-	SupabaseAnonKey    string
-	GitHubClientID     string
-	GitHubClientSecret string
-	Port               string
+	DatabaseURL       string `env:"DATABASE_URL" envDefault:"postgres://postgres:postgres@localhost:54322/postgres"`
+	SupabaseURL       string `env:"SUPABASE_URL,required"`
+	SupabaseAnonKey   string `env:"SUPABASE_ANON_KEY,required"`
+	SupabaseJWTSecret string `env:"SUPABASE_JWT_SECRET,required"`
+	Port              string `env:"PORT" envDefault:"8080"`
 }
 
 func Load() *Config {
@@ -22,19 +21,10 @@ func Load() *Config {
 		log.Println("No .env file found, reading from environment variables")
 	}
 
-	return &Config{
-		DatabaseURL:        getEnv("DATABASE_URL", "postgres://user:password@localhost:5432/issueboard"),
-		SupabaseURL:        os.Getenv("SUPABASE_URL"),
-		SupabaseAnonKey:    os.Getenv("SUPABASE_ANON_KEY"),
-		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-		Port:               getEnv("PORT", "8080"),
+	cfg := Config{}
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("Failed to parse config: %v", err)
 	}
-}
 
-func getEnv(key, fallback string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return fallback
+	return &cfg
 }

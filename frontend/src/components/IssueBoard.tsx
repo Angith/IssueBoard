@@ -18,9 +18,33 @@ interface Category {
 
 interface Props {
   categories: Category[];
+  error?: string;
 }
 
-export default function IssueBoard({ categories }: Props) {
+export default function IssueBoard({ categories, error }: Props) {
+  if (error) {
+    return (
+      <div className="p-8 border-2 border-red-200 bg-red-50 rounded-lg text-red-800">
+        <h3 className="text-xl font-bold mb-2">Something went wrong</h3>
+        <p>{error}</p>
+        {error.includes('rate limit') && (
+          <p className="mt-4 text-sm">
+            GitHub unauthenticated API has a limit of 60 requests per hour. 
+            Please wait a while before refreshing again.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (categories.length === 0) {
+    return (
+      <div className="p-8 text-center text-gray-500 border-2 border-dashed rounded-lg">
+        No issues found for this repository.
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-6 overflow-x-auto pb-8">
       {categories.map((category) => (
