@@ -74,7 +74,7 @@ func (r *RepoRepository) ListByUserID(ctx context.Context, userID uuid.UUID) ([]
 	}
 	defer rows.Close()
 
-	var repos []*models.Repository
+	repos := make([]*models.Repository, 0)
 	for rows.Next() {
 		repo := &models.Repository{}
 		err := rows.Scan(&repo.ID, &repo.GitHubRepoID, &repo.FullName, &repo.Owner, &repo.Name, &repo.URL, &repo.CreatedAt)
@@ -100,4 +100,40 @@ func (r *RepoRepository) GetByID(ctx context.Context, userID uuid.UUID, repoID u
 		return nil, err
 	}
 	return repo, nil
+}
+
+func (r *RepoRepository) RemoveFromUser(ctx context.Context, userID uuid.UUID, repoID uuid.UUID) error {
+	query := `
+		DELETE FROM user_repository
+		WHERE user_id = $1 AND repository_id = $2
+	`
+	_, err := r.db.Exec(ctx, query, userID, repoID)
+	return err
+}
+
+func (r *RepoRepository) GetTrackedLabels(ctx context.Context, userID uuid.UUID, repoID uuid.UUID) ([]string, error) {
+	query := `
+		SELECT tracked_labels
+		FROM user_repository
+		WHERE user_id = $1 AND repository_id = $2
+	`
+	var labels []string
+	err := r.db.QueryRow(ctx, query, userID, repoID).Scan(&labels)
+	if err != nil {
+		return nil, err
+	}
+	if labels == nil {
+		return []string{}, nil
+	}
+	return labels, nil
+}
+
+func (r *RepoRepository) UpdateTrackedLabels(ctx context.Context, userID uuid.UUID, repoID uuid.UUID, labels []string) error {
+	query := `
+		UPDATE user_repository
+		SET tracked_labels = $3
+		WHERE user_id = $1 AND repository_id = $2
+	`
+	_, err := r.db.Exec(ctx, query, userID, repoID, labels)
+	return err
 }

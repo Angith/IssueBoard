@@ -1,4 +1,4 @@
--- 001_initial_schema.sql
+-- 20260503000001_initial_schema.sql
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

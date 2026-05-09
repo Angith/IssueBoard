@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/MicahParks/keyfunc/v3"
 	"github.com/angith/issueboard/internal/repository"
 	"github.com/angith/issueboard/internal/repository/models"
 	"github.com/golang-jwt/jwt/v5"
@@ -16,7 +17,13 @@ type contextKey string
 
 const UserIDKey contextKey = "user_id"
 
-func AuthMiddleware(jwtSecret string, userRepo *repository.UserRepository) func(http.Handler) http.Handler {
+func AuthMiddleware(supabaseURL string, userRepo *repository.UserRepository) func(http.Handler) http.Handler {
+	jwksURL := supabaseURL + "/auth/v1/.well-known/jwks.json"
+	kf, err := keyfunc.NewDefault([]string{jwksURL})
+	if err != nil {
+		fmt.Printf("Failed to create JWKS keyfunc: %v\n", err)
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -31,12 +38,7 @@ func AuthMiddleware(jwtSecret string, userRepo *repository.UserRepository) func(
 				return
 			}
 
-			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-				}
-				return []byte(jwtSecret), nil
-			})
+			token, err := jwt.Parse(tokenString, kf.Keyfunc)
 
 			if err != nil || !token.Valid {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
@@ -68,7 +70,7 @@ func AuthMiddleware(jwtSecret string, userRepo *repository.UserRepository) func(
 				Email: email,
 			}
 			if err := userRepo.CreateOrUpdate(r.Context(), user); err != nil {
-				// We don't necessarily want to fail here if it's just a sync issue, 
+				// We don't necessarily want to fail here if it's just a sync issue,
 				// but for this project we'll assume it's critical.
 				http.Error(w, "Failed to sync user", http.StatusInternalServerError)
 				return

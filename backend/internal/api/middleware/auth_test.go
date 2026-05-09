@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 func TestAuthMiddleware(t *testing.T) {

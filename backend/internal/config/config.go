@@ -12,6 +12,7 @@ type Config struct {
 	SupabaseURL       string `env:"SUPABASE_URL,required"`
 	SupabaseAnonKey   string `env:"SUPABASE_ANON_KEY,required"`
 	SupabaseJWTSecret string `env:"SUPABASE_JWT_SECRET,required"`
+	GitHubToken       string `env:"GITHUB_TOKEN"`
 	Port              string `env:"PORT" envDefault:"8080"`
 }
 

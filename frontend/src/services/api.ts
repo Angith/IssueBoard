@@ -17,6 +17,10 @@ export async function apiFetch(path: string, options: RequestInit = {}, token?: 
     throw new Error(errorData.error || `API Error: ${response.statusText}`);
   }
 
+  if (response.status === 204) {
+    return null;
+  }
+
   return response.json();
 }
 
@@ -26,9 +30,18 @@ export const repositoryService = {
     method: 'POST',
     body: JSON.stringify({ url }),
   }, token),
+  remove: (repoId: string, token: string) => apiFetch(`/api/repos/${repoId}`, {
+    method: 'DELETE',
+  }, token),
 };
 
 export const issueService = {
   getBoard: (repoId: string, token: string) => apiFetch(`/api/repos/${repoId}/issues`, {}, token),
   refresh: (repoId: string, token: string) => apiFetch(`/api/repos/${repoId}/refresh`, { method: 'POST' }, token),
+  getAvailableLabels: (repoId: string, token: string) => apiFetch(`/api/repos/${repoId}/labels/available`, {}, token),
+  getTrackedLabels: (repoId: string, token: string) => apiFetch(`/api/repos/${repoId}/labels/tracked`, {}, token),
+  updateTrackedLabels: (repoId: string, labels: string[], token: string) => apiFetch(`/api/repos/${repoId}/labels/tracked`, {
+    method: 'PUT',
+    body: JSON.stringify({ labels }),
+  }, token),
 };

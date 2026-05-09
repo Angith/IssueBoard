@@ -28,7 +28,7 @@ func main() {
 	userRepo := repository.NewUserRepository(dbPool)
 
 	// Initialize GitHub services
-	ghClient := github.NewClient("")
+	ghClient := github.NewClient(cfg.GitHubToken)
 	ghRepoService := github.NewRepoService(ghClient)
 	ghIssueService := github.NewIssueService(ghClient)
 
@@ -49,7 +49,7 @@ func main() {
 	})
 
 	// Protected routes
-	authMidd := middleware.AuthMiddleware(cfg.SupabaseJWTSecret, userRepo)
+	authMidd := middleware.AuthMiddleware(cfg.SupabaseURL, userRepo)
 
 	mux.Handle("/api/repos", authMidd(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
@@ -60,16 +60,32 @@ func main() {
 	})))
 
 	mux.Handle("/api/repos/", authMidd(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Very simple router logic
-		if r.URL.Path[len(r.URL.Path)-len("/issues"):] == "/issues" {
+		// Handle DELETE /api/repos/{id}
+		if r.Method == http.MethodDelete {
+			repoHandler.RemoveRepository(w, r)
+			return
+		}
+		// Handle other subpaths
+		if len(r.URL.Path) > len("/labels/available") && r.URL.Path[len(r.URL.Path)-len("/labels/available"):] == "/labels/available" {
+			issueHandler.GetAvailableLabels(w, r)
+		} else if len(r.URL.Path) > len("/labels/tracked") && r.URL.Path[len(r.URL.Path)-len("/labels/tracked"):] == "/labels/tracked" {
+			if r.Method == http.MethodPut {
+				issueHandler.UpdateTrackedLabels(w, r)
+			} else {
+				issueHandler.GetTrackedLabels(w, r)
+			}
+		} else if len(r.URL.Path) > len("/issues") && r.URL.Path[len(r.URL.Path)-len("/issues"):] == "/issues" {
 			issueHandler.GetCategorizedIssues(w, r)
-		} else if r.URL.Path[len(r.URL.Path)-len("/refresh"):] == "/refresh" {
+		} else if len(r.URL.Path) > len("/refresh") && r.URL.Path[len(r.URL.Path)-len("/refresh"):] == "/refresh" {
 			issueHandler.RefreshIssues(w, r)
 		}
 	})))
 
+	// Wrap mux with CORS middleware
+	handler := middleware.CorsMiddleware(mux)
+
 	log.Printf("Server starting on port %s", cfg.Port)
-	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
+	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
 		log.Fatal(err)
 	}
 }

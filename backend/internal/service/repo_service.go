@@ -45,3 +45,7 @@ func (s *RepoService) AddRepository(ctx context.Context, userID uuid.UUID, url s
 func (s *RepoService) ListRepositories(ctx context.Context, userID uuid.UUID) ([]*models.Repository, error) {
 	return s.repoRepo.ListByUserID(ctx, userID)
 }
+
+func (s *RepoService) RemoveRepository(ctx context.Context, userID uuid.UUID, repoID uuid.UUID) error {
+	return s.repoRepo.RemoveFromUser(ctx, userID, repoID)
+}

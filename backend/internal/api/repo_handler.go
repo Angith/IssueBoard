@@ -61,3 +61,27 @@ func (h *RepoHandler) ListRepositories(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(repos)
 }
+
+func (h *RepoHandler) RemoveRepository(w http.ResponseWriter, r *http.Request) {
+	userIDStr := middleware.GetUserID(r.Context())
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusUnauthorized)
+		return
+	}
+
+	idStr := r.URL.Path[len("/api/repos/"):]
+	repoID, err := uuid.Parse(idStr)
+	if err != nil {
+		http.Error(w, "Invalid repository ID", http.StatusBadRequest)
+		return
+	}
+
+	err = h.repoService.RemoveRepository(r.Context(), userID, repoID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

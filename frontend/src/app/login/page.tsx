@@ -10,9 +10,11 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.debug('[Login Debug] Login attempt started for email:', email);
     setLoading(true);
     setMessage('');
 
+    console.debug('[Login Debug] Calling supabase.auth.signInWithOtp for:', email);
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -21,11 +23,14 @@ export default function LoginPage() {
     });
 
     if (error) {
+      console.error('[Login Debug] Error during sign in:', error.message, error);
       setMessage(`Error: ${error.message}`);
     } else {
+      console.info('[Login Debug] Magic link sent successfully. Awaiting user action.');
       setMessage('Check your email for the magic link!');
     }
     setLoading(false);
+    console.debug('[Login Debug] Login attempt finished.');
   };
 
   return (
