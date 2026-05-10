@@ -2,23 +2,36 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/angith/issueboard/internal/api"
 	"github.com/angith/issueboard/internal/api/middleware"
 	"github.com/angith/issueboard/internal/config"
 	"github.com/angith/issueboard/internal/github"
+	"github.com/angith/issueboard/internal/logger"
 	"github.com/angith/issueboard/internal/repository"
 	"github.com/angith/issueboard/internal/service"
 )
 
 func main() {
-	cfg := config.Load()
+	// Bootstrap with error level so config-load warnings are visible.
+	// logger.Init() will re-apply the correct level once config is loaded.
+	logger.Init(logger.Error)
+
+	cfg, err := config.Load()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to load configuration, continuing with minimal defaults")
+		cfg = &config.Config{Port: "8080"} // minimal to keep server running
+	}
+
+	// Re-initialize with the level from config (LOG_LEVEL env var).
+	logger.Init(cfg.LogLevel)
 
 	dbPool, err := repository.NewDBPool(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logrus.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer dbPool.Close()
 
@@ -81,11 +94,13 @@ func main() {
 		}
 	})))
 
-	// Wrap mux with CORS middleware
+	// Wrap mux with middlewares
 	handler := middleware.CorsMiddleware(mux)
+	handler = middleware.RecoveryMiddleware(handler)
+	handler = middleware.LoggerMiddleware(handler)
 
-	log.Printf("Server starting on port %s", cfg.Port)
+	logrus.Infof("Server starting on port %s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
-		log.Fatal(err)
+		logrus.Fatalf("Server stopped unexpectedly: %v", err)
 	}
 }

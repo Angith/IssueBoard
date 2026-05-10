@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/angith/issueboard/internal/repository/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type contextKey string
@@ -21,7 +21,7 @@ func AuthMiddleware(supabaseURL string, userRepo *repository.UserRepository) fun
 	jwksURL := supabaseURL + "/auth/v1/.well-known/jwks.json"
 	kf, err := keyfunc.NewDefault([]string{jwksURL})
 	if err != nil {
-		fmt.Printf("Failed to create JWKS keyfunc: %v\n", err)
+		logrus.WithError(err).Error("Failed to create JWKS keyfunc")
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -41,6 +41,9 @@ func AuthMiddleware(supabaseURL string, userRepo *repository.UserRepository) fun
 			token, err := jwt.Parse(tokenString, kf.Keyfunc)
 
 			if err != nil || !token.Valid {
+				if err != nil {
+					logrus.WithError(err).Debug("JWT parsing error")
+				}
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
 			}
@@ -70,6 +73,7 @@ func AuthMiddleware(supabaseURL string, userRepo *repository.UserRepository) fun
 				Email: email,
 			}
 			if err := userRepo.CreateOrUpdate(r.Context(), user); err != nil {
+				logrus.WithError(err).Error("Failed to sync user to database")
 				// We don't necessarily want to fail here if it's just a sync issue,
 				// but for this project we'll assume it's critical.
 				http.Error(w, "Failed to sync user", http.StatusInternalServerError)
