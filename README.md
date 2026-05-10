@@ -1,79 +1,51 @@
 # IssueBoard
 
-IssueBoard is a web application designed to help developers manage and view GitHub issues across multiple repositories in a single, unified view. Users can curate an inventory of repositories and view issues grouped dynamically by their labels.
+IssueBoard is a web application that helps developers manage and triage GitHub issues across multiple repositories in a single, unified view. Users authenticate with their email, curate a personal inventory of GitHub repositories, and view issues dynamically grouped by labels — making it easy to track work across projects without switching tabs.
 
-## 🏗️ Architecture Summary
+---
+
+## ✨ Features
+
+- **Multi-repo inventory** — add any public GitHub repository to your personal dashboard
+- **Label-based categorisation** — choose which labels to track; issues are grouped accordingly
+- **On-demand refresh** — pull the latest issues from GitHub whenever you need them
+- **Passwordless auth** — sign in via Supabase Magic Link (email-based, no passwords)
+
+---
+
+## 🏗️ Architecture
 
 The project follows a decoupled client-server architecture:
 
-- **Frontend**: Next.js 16 (React 19) using Supabase for authentication.
-- **Backend**: Go 1.25 REST API following a layered architecture.
-- **Database**: PostgreSQL (Supabase) for caching metadata.
-- **Authentication**: Supabase Magic Link (email-based, passwordless).
-- **External Integration**: Unauthenticated GitHub REST API.
+| Layer | Technology | Role |
+|---|---|---|
+| **Frontend** | Next.js 16 (React 19) | UI, routing, Supabase auth client |
+| **Backend** | Go 1.25 REST API | Business logic, GitHub API integration |
+| **Database** | PostgreSQL via Supabase | Persistent storage for repos, issues, labels |
+| **Auth** | Supabase (Magic Link) | Passwordless email authentication |
+| **External API** | GitHub REST API | Fetches repository metadata and issues |
 
-For more details, see [architecture.md](./architecture.md).
+For a deeper dive into flows and diagrams, see [Architecture.md](./Architecture.md).
 
-## 📋 Prerequisites
+---
 
-- **Go**: v1.25.0+
-- **Node.js**: v22+
-- **Docker**: For local services
-- **Supabase CLI**: For local Auth and DB development
+## 📁 Project Structure
 
-## 🚀 Quick Start (Local Setup)
-
-### 1. Start Infrastructure
-```bash
-supabase start
 ```
-This starts local Postgres, Auth (GoTrue), and other services. It will output your local API URL and Keys.
-
-### 2. Configure Environment
-Create `.env` files based on the output of `supabase start`.
-
-**Backend (`backend/.env`)**
-```env
-DATABASE_URL=postgres://postgres:postgres@localhost:54322/postgres
-SUPABASE_URL=http://localhost:54321
-SUPABASE_ANON_KEY=your_local_anon_key
-SUPABASE_JWT_SECRET=your_local_jwt_secret
-PORT=8080
-```
-
-**Frontend (`frontend/.env.local`)**
-```env
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_local_anon_key
-NEXT_PUBLIC_API_URL=http://localhost:8080
-```
-
-### 3. Run Backend
-```bash
-cd backend
-go run cmd/main.go
-```
-
-### 4. Run Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## 🧪 Testing
-
-### Backend
-```bash
-cd backend
-go test ./...
-```
-
-### Frontend
-```bash
-cd frontend
-npm run lint
+IssueBoard/
+├── backend/        # Go REST API
+├── frontend/       # Next.js application
+├── architecture.md # System architecture and data flow diagrams
+└── specs/          # Feature specifications
 ```
 
 ---
-For more detailed information, see [quickstart.md](./specs/002-auth-supabase-dev-setup/quickstart.md).
+
+## 🚀 Getting Started
+
+Each service has its own detailed setup guide:
+
+- **[Backend README](./backend/README.md)** — Go server setup, Supabase local dev, environment variables, API reference
+- **[Frontend README](./frontend/README.md)** — Next.js setup, environment variables, available scripts
+
+---

@@ -12,13 +12,12 @@ import (
 )
 
 type Config struct {
-	DatabaseURL       string       `env:"DATABASE_URL" envDefault:"postgres://postgres:postgres@localhost:54322/postgres"`
-	SupabaseURL       string       `env:"SUPABASE_URL,required"`
-	SupabaseAnonKey   string       `env:"SUPABASE_ANON_KEY,required"`
-	SupabaseJWTSecret string       `env:"SUPABASE_JWT_SECRET,required"`
-	GitHubToken       string       `env:"GITHUB_TOKEN"`
-	Port              string       `env:"PORT" envDefault:"8080"`
-	LogLevel          logger.Level // populated after env parsing — see Load()
+	DatabaseURL     string       `env:"DATABASE_URL" envDefault:"postgres://postgres:postgres@localhost:54322/postgres"`
+	SupabaseURL     string       `env:"SUPABASE_URL,required"`
+	SupabaseAnonKey string       `env:"SUPABASE_ANON_KEY,required"`
+	GitHubToken     string       `env:"GITHUB_TOKEN"`
+	Port            string       `env:"PORT" envDefault:"8080"`
+	LogLevel        logger.Level // populated after env parsing — see Load()
 }
 
 func Load() (*Config, error) {
