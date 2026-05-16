@@ -58,26 +58,28 @@ export default function AddRepoForm({ onRepoAdded }: Props) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border bg-gray-50 p-6">
-      <h2 className="mb-4 text-xl font-semibold">Add New Repository</h2>
-      <div className="flex gap-2">
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="flex items-center gap-3 rounded-md border border-zinc-800/60 bg-[#09090b] px-3 py-1.5 focus-within:border-zinc-700 focus-within:ring-1 focus-within:ring-zinc-700 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-zinc-500" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+        </svg>
         <input
           type="text"
-          placeholder="https://github.com/owner/repo"
+          placeholder="Add new repository (e.g., https://github.com/owner/repo)"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           required
-          className="flex-1 rounded border px-4 py-2 text-black"
+          className="flex-1 bg-transparent border-none text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-0 p-0"
         />
         <button
           type="submit"
           disabled={submitting}
-          className="rounded bg-black px-6 py-2 text-white hover:bg-gray-800 disabled:opacity-50"
+          className="rounded bg-zinc-100 px-3 py-1 text-xs font-medium text-black hover:bg-white disabled:opacity-50 transition-colors"
         >
           {submitting ? 'Adding...' : 'Add'}
         </button>
       </div>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
     </form>
   );
 }

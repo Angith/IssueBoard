@@ -34,26 +34,41 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
-      <h1 className="text-4xl font-bold mb-8">Login to IssueBoard</h1>
-      <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full max-w-md">
-        <input
-          type="email"
-          placeholder="Your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="p-2 border rounded"
-          required
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? 'Sending...' : 'Send Magic Link'}
-        </button>
-      </form>
-      {message && <p className="mt-4 text-center">{message}</p>}
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#09090b] px-4 selection:bg-zinc-800">
+      <div className="w-full max-w-sm p-8 rounded-2xl bg-zinc-900/20 backdrop-blur-md border border-zinc-800/50 shadow-2xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-medium tracking-tight text-zinc-100">Log in to IssueBoard</h1>
+          <p className="mt-2 text-sm text-zinc-400">Enter your email to receive a magic link</p>
+        </div>
+        <form onSubmit={handleLogin} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="email" className="text-xs font-medium text-zinc-400 ml-1">
+              Email address
+            </label>
+            <input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-2.5 bg-zinc-900/50 border border-zinc-800 rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500 transition-all duration-200"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full p-2.5 bg-zinc-100 text-zinc-900 font-medium text-sm rounded-lg hover:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-[#09090b] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Sending...' : 'Continue with Email'}
+          </button>
+        </form>
+        {message && (
+          <div className="mt-6 p-3 rounded-md bg-zinc-900/50 border border-zinc-800/50">
+            <p className="text-sm text-center text-zinc-300">{message}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
