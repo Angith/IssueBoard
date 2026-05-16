@@ -53,3 +53,10 @@ CREATE TABLE issue_labels (
     label_id UUID NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
     PRIMARY KEY (issue_id, label_id)
 );
+
+CREATE TABLE user_settings (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    github_token BYTEA,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+

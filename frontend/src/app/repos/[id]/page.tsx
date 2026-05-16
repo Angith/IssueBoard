@@ -2,8 +2,9 @@
 
 import { useEffect, useState, use } from 'react';
 import { useAuth } from '@/components/AuthProvider';
-import { issueService } from '@/services/api';
+import { issueService, userService } from '@/services/api';
 import IssueBoard from '@/components/IssueBoard';
+import SettingsModal from '@/components/SettingsModal';
 
 export default function RepoDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -12,6 +13,8 @@ export default function RepoDetailsPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [hasToken, setHasToken] = useState<boolean | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Label configuration state
   const [showLabelConfig, setShowLabelConfig] = useState(false);
@@ -23,14 +26,22 @@ export default function RepoDetailsPage({ params }: { params: Promise<{ id: stri
   const fetchBoard = async () => {
     if (!session?.access_token) return;
     try {
+      const settings = await userService.getSettings(session.access_token);
+      setHasToken(settings.has_github_token);
+
       const data = await issueService.getBoard(id, session.access_token);
       setBoard(data);
-      if (data && data.is_tracking_configured === false) {
+      if (data && data.is_tracking_configured === false && settings.has_github_token) {
         openLabelConfig();
       }
       setError('');
     } catch (err: any) {
-      setError(err.message);
+      if (err.message?.includes('token') || err.message?.includes('Unauthorized')) {
+        setError("Your GitHub session expired or the token was revoked. Please authenticate again.");
+        setHasToken(false);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -107,8 +118,8 @@ export default function RepoDetailsPage({ params }: { params: Promise<{ id: stri
         <div className="flex gap-4">
           <button
             onClick={openLabelConfig}
-            disabled={refreshing || loading}
-            className="border border-zinc-700/50 text-zinc-300 px-4 py-2 rounded-lg hover:bg-zinc-800/50 hover:text-zinc-100 transition-colors flex items-center gap-2 text-sm font-medium"
+            disabled={refreshing || loading || !hasToken}
+            className="border border-zinc-700/50 text-zinc-300 px-4 py-2 rounded-lg hover:bg-zinc-800/50 hover:text-zinc-100 transition-colors flex items-center gap-2 text-sm font-medium disabled:opacity-50"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
@@ -117,7 +128,7 @@ export default function RepoDetailsPage({ params }: { params: Promise<{ id: stri
           </button>
           <button
             onClick={handleRefresh}
-            disabled={refreshing}
+            disabled={refreshing || !hasToken}
             className="bg-zinc-100 text-zinc-900 px-5 py-2 rounded-lg hover:bg-white disabled:opacity-50 transition-colors text-sm font-medium shadow-sm"
           >
             {refreshing ? 'Syncing Issues...' : 'Sync from GitHub'}
@@ -125,7 +136,22 @@ export default function RepoDetailsPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {!board?.is_tracking_configured && !showLabelConfig ? (
+      {!hasToken && (
+        <div className="mb-6 p-4 border border-zinc-800 border-dashed rounded-lg bg-zinc-900/30 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-medium text-zinc-200">Connect GitHub</h3>
+            <p className="text-xs text-zinc-400 mt-1">Add a GitHub token to enable syncing repositories and issues.</p>
+          </div>
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="bg-zinc-800 text-zinc-200 hover:bg-zinc-700 px-4 py-1.5 rounded-md text-sm font-medium transition-colors border border-zinc-700"
+          >
+            Add Token
+          </button>
+        </div>
+      )}
+
+      {hasToken && !board?.is_tracking_configured && !showLabelConfig ? (
         <div className="bg-zinc-900/50 border border-zinc-800 text-zinc-300 p-6 rounded-xl text-center">
           <h2 className="text-xl font-semibold text-zinc-100 mb-2">Setup Required</h2>
           <p className="mb-4 text-zinc-400">You haven't configured which labels to track for this repository yet.</p>
@@ -202,6 +228,14 @@ export default function RepoDetailsPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       )}
+      
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => {
+          setIsSettingsOpen(false);
+          fetchBoard();
+        }} 
+      />
     </div>
   );
 }

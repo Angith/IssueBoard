@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/MicahParks/keyfunc/v3"
+	"github.com/angith/issueboard/internal/crypto"
 	"github.com/angith/issueboard/internal/repository"
 	"github.com/angith/issueboard/internal/repository/models"
 	"github.com/golang-jwt/jwt/v5"
@@ -16,8 +17,9 @@ import (
 type contextKey string
 
 const UserIDKey contextKey = "user_id"
+const GitHubTokenKey contextKey = "github_token"
 
-func AuthMiddleware(supabaseURL string, userRepo *repository.UserRepository) func(http.Handler) http.Handler {
+func AuthMiddleware(supabaseURL string, userRepo *repository.UserRepository, encryptionKey string) func(http.Handler) http.Handler {
 	jwksURL := supabaseURL + "/auth/v1/.well-known/jwks.json"
 	kf, err := keyfunc.NewDefault([]string{jwksURL})
 	if err != nil {
@@ -81,6 +83,17 @@ func AuthMiddleware(supabaseURL string, userRepo *repository.UserRepository) fun
 			}
 
 			ctx := context.WithValue(r.Context(), UserIDKey, userIDStr)
+
+			// Fetch GitHub token if available
+			if encryptedToken, err := userRepo.GetGitHubToken(ctx, userIDStr); err == nil && len(encryptedToken) > 0 {
+				decryptedToken, err := crypto.Decrypt(encryptedToken, encryptionKey)
+				if err == nil {
+					ctx = context.WithValue(ctx, GitHubTokenKey, decryptedToken)
+				} else {
+					logrus.WithError(err).Error("Failed to decrypt GitHub token")
+				}
+			}
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -89,4 +102,9 @@ func AuthMiddleware(supabaseURL string, userRepo *repository.UserRepository) fun
 func GetUserID(ctx context.Context) string {
 	userID, _ := ctx.Value(UserIDKey).(string)
 	return userID
+}
+
+func GetGitHubToken(ctx context.Context) string {
+	token, _ := ctx.Value(GitHubTokenKey).(string)
+	return token
 }

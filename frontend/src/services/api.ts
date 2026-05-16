@@ -13,8 +13,23 @@ export async function apiFetch(path: string, options: RequestInit = {}, token?: 
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `API Error: ${response.statusText}`);
+    let errorMessage = `API Error: ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorData.message || errorMessage;
+    } catch {
+      const text = await response.text().catch(() => '');
+      if (text) errorMessage = text.trim();
+    }
+    
+    // Convert generic GitHub API errors
+    if (response.status === 401 || errorMessage.includes('401') || errorMessage.includes('Bad credentials')) {
+      errorMessage = "Your GitHub session expired or the token was revoked. Please authenticate again.";
+    } else if (response.status === 403 || errorMessage.includes('403') || errorMessage.includes('API rate limit')) {
+      errorMessage = "GitHub API rate limit exceeded. Please wait a moment and try again.";
+    }
+
+    throw new Error(errorMessage);
   }
 
   if (response.status === 204) {
@@ -45,3 +60,15 @@ export const issueService = {
     body: JSON.stringify({ labels }),
   }, token),
 };
+
+export const userService = {
+  getSettings: (token: string) => apiFetch('/api/user/settings', {}, token),
+  setGitHubToken: (githubToken: string, token: string) => apiFetch('/api/user/settings/github-token', {
+    method: 'PUT',
+    body: JSON.stringify({ token: githubToken }),
+  }, token),
+  deleteGitHubToken: (token: string) => apiFetch('/api/user/settings/github-token', {
+    method: 'DELETE',
+  }, token),
+};
+

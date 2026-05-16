@@ -49,9 +49,13 @@ func main() {
 	repoService := service.NewRepoService(repoRepo, ghRepoService)
 	issueService := service.NewIssueService(issueRepo, repoRepo, ghIssueService)
 
+	// Protected routes
+	authMidd := middleware.AuthMiddleware(cfg.SupabaseURL, userRepo, cfg.EncryptionKey)
+
 	// Initialize handlers
 	repoHandler := api.NewRepoHandler(repoService)
 	issueHandler := api.NewIssueHandler(issueService)
+	userHandler := api.NewUserHandler(userRepo, cfg.EncryptionKey)
 
 	// Set up routes
 	mux := http.NewServeMux()
@@ -61,8 +65,20 @@ func main() {
 		fmt.Fprintln(w, "OK")
 	})
 
-	// Protected routes
-	authMidd := middleware.AuthMiddleware(cfg.SupabaseURL, userRepo)
+	// User Settings Routes
+	mux.Handle("/api/user/settings", authMidd(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			userHandler.GetSettings(w, r)
+		}
+	})))
+
+	mux.Handle("/api/user/settings/github-token", authMidd(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut || r.Method == http.MethodPost {
+			userHandler.SetGitHubToken(w, r)
+		} else if r.Method == http.MethodDelete {
+			userHandler.DeleteGitHubToken(w, r)
+		}
+	})))
 
 	mux.Handle("/api/repos", authMidd(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {

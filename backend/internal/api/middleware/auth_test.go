@@ -13,7 +13,7 @@ func TestAuthMiddleware(t *testing.T) {
 	// I'll skip it for now to avoid complexity of mocking pgxpool.
 	t.Skip("Skipping because of database dependency in middleware")
 
-	middleware := AuthMiddleware(jwtSecret, nil)
+	middleware := AuthMiddleware(jwtSecret, nil, "dummy-encryption-key")
 
 	t.Run("Missing Authorization Header", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/repos", nil)

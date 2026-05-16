@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
-import { repositoryService } from '@/services/api';
+import { repositoryService, userService } from '@/services/api';
 import Link from 'next/link';
 import AddRepoForm from '@/components/AddRepoForm';
+import SettingsModal from '@/components/SettingsModal';
 
 export default function InventoryPage() {
   const { session, loading: authLoading } = useAuth();
@@ -13,14 +14,26 @@ export default function InventoryPage() {
   const [error, setError] = useState('');
   const [repoToDelete, setRepoToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hasToken, setHasToken] = useState<boolean | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const fetchRepos = async () => {
     if (!session?.access_token) return;
     try {
-      const data = await repositoryService.list(session.access_token);
-      setRepos(data);
+      const settings = await userService.getSettings(session.access_token);
+      setHasToken(settings.has_github_token);
+      
+      if (settings.has_github_token) {
+        const data = await repositoryService.list(session.access_token);
+        setRepos(data);
+      }
     } catch (err: any) {
-      setError(err.message);
+      if (err.message?.includes('token') || err.message?.includes('Unauthorized')) {
+        setError("Your GitHub session expired or the token was revoked. Please authenticate again.");
+        setHasToken(false);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -54,7 +67,22 @@ export default function InventoryPage() {
         <h1 className="text-2xl font-semibold mb-8 tracking-tight">My Repositories</h1>
         
         <div className="mb-8">
-          <AddRepoForm onRepoAdded={fetchRepos} />
+          {hasToken === false ? (
+            <div className="border border-zinc-800 border-dashed rounded-lg p-8 text-center bg-zinc-900/30">
+              <h3 className="text-lg font-medium text-zinc-200 mb-2">Connect GitHub</h3>
+              <p className="text-sm text-zinc-400 mb-4 max-w-md mx-auto">
+                You need to add a GitHub Personal Access Token to sync repositories and issues.
+              </p>
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="bg-zinc-100 text-zinc-900 hover:bg-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Add a Token
+              </button>
+            </div>
+          ) : (
+            <AddRepoForm onRepoAdded={fetchRepos} />
+          )}
         </div>
 
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
@@ -124,6 +152,13 @@ export default function InventoryPage() {
           </div>
         )}
       </div>
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => {
+          setIsSettingsOpen(false);
+          fetchRepos();
+        }} 
+      />
     </div>
   );
 }
