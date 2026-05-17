@@ -31,17 +31,6 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
    ```
    The application will be available at `http://localhost:3000`.
 
-### Backend Setup (Reference)
-1. Navigate to the backend directory:
-   ```bash
-   cd ../backend
-   ```
-2. Run the Go server:
-   ```bash
-   go run cmd/main.go
-   ```
-   Ensure the backend is running for the frontend to fetch data.
-
 ## 🧪 Testing
 
 Run frontend linting and type checking:

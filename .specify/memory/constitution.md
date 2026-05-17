@@ -1,13 +1,9 @@
 <!--
 Sync Impact Report
-- Version change: Initial → 1.0.0
+- Version change: 1.0.0 → 1.1.0
 - List of modified principles:
-  - [PRINCIPLE_1_NAME] → I. Architecture & Separation
-  - [PRINCIPLE_2_NAME] → II. API-First Design
-  - [PRINCIPLE_3_NAME] → III. Clean Code & Idiomatic Standards
-  - [PRINCIPLE_4_NAME] → IV. Testing & Quality Gates
-  - [PRINCIPLE_5_NAME] → V. Security & Authentication
-- Added sections: Linting & Tooling, Documentation & Workflow
+  - V. Security & Authentication: Updated to mandate Supabase Magic Link and JWT validation.
+- Added sections: N/A
 - Removed sections: N/A
 - Templates requiring updates:
   - .specify/templates/plan-template.md (✅ aligns)
@@ -33,7 +29,7 @@ Code must prioritize readability, small functions, and meaningful naming. Backen
 The backend must have a minimum of 70% unit test coverage for business logic, with external dependencies mocked. The frontend must enforce component-level validation and type safety.
 
 ### V. Security & Authentication
-GitHub OAuth must be securely implemented, ensuring tokens are never exposed to the frontend. Secrets must be managed via environment variables, and all external integrations must be abstracted via service layers.
+Authentication must be handled via Supabase Magic Link (email-based login). Backend requests must be secured by validating Supabase JWTs on every request. Secrets must be managed via environment variables, and all external integrations must be abstracted via service layers.
 
 ## Linting & Tooling
 - **Backend**: Must pass `gofmt` and `golangci-lint` checks.
@@ -48,4 +44,4 @@ GitHub OAuth must be securely implemented, ensuring tokens are never exposed to 
 ## Governance
 This constitution supersedes all other development practices in this project. Amendments require documentation in a PR, approval from project leads, and a version bump. All PR reviews must verify compliance with these principles.
 
-**Version**: 1.0.0 | **Ratified**: 2026-04-26 | **Last Amended**: 2026-04-26
+**Version**: 1.1.0 | **Ratified**: 2026-04-26 | **Last Amended**: 2026-05-02

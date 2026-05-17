@@ -8,7 +8,6 @@ import (
 
 type Repository struct {
 	ID           uuid.UUID `json:"id"`
-	UserID       uuid.UUID `json:"user_id"`
 	GitHubRepoID int64     `json:"github_repo_id"`
 	FullName     string    `json:"full_name"`
 	Owner        string    `json:"owner"`
