@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { userService } from '../services/api';
 import { useAuth } from './AuthProvider';
+import { useRepos } from './RepoProvider';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface SettingsModalProps {
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { session } = useAuth();
+  const { fetchRepos } = useRepos();
   const [tokenInput, setTokenInput] = useState('');
   const [hasToken, setHasToken] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +47,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setSuccess('Token updated successfully.');
       setHasToken(true);
       setTokenInput('');
+      await fetchRepos();
     } catch (err: any) {
       setError(err.message || 'Failed to update token.');
     } finally {
@@ -62,6 +65,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       setSuccess('Token removed successfully.');
       setHasToken(false);
       setTokenInput('');
+      await fetchRepos();
     } catch (err: any) {
       setError(err.message || 'Failed to remove token.');
     } finally {

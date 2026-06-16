@@ -109,7 +109,7 @@ export default function RepoDetailsPage({ params }: { params: Promise<{ id: stri
   if (authLoading || (loading && !board)) return <div className="p-8">Loading board...</div>;
 
   return (
-    <div className="p-8 min-h-screen bg-[#09090b] text-zinc-100">
+    <div className="p-8 min-h-full bg-[#09090b] text-zinc-100">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">{board?.repository || 'Repository'}</h1>
